@@ -10,8 +10,8 @@ var events = require('events'),
     fs = require('fs'),
     path = require('path'),
     util = require('util'),
-    common = require('../common'),
-    Transport = require('./transport').Transport,
+    common = require('winston/lib/winston/common'),
+    Transport = require('winston').Transport,
     Stream = require('stream').Stream,
     os = require('os');
 
@@ -21,8 +21,10 @@ var events = require('events'),
 // Constructor function for the DailyRotateFile transport object responsible
 // for persisting log messages and metadata to one or more files.
 //
-var DailyRotateFile = exports.DailyRotateFile = function (options) {
+var DailyRotateFile = module.exports = function (options) {
   Transport.call(this, options);
+
+  var self = this;
 
   //
   // Helper function which throws an `Error` in the event
@@ -102,32 +104,6 @@ var DailyRotateFile = exports.DailyRotateFile = function (options) {
   this._date   = now.getDate();
   this._hour   = now.getHours();
   this._minute = now.getMinutes();
-
-  var token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhM])\1?/g,
-      pad = function (val, len) {
-              val = String(val);
-              len = len || 2;
-              while (val.length < len) val = "0" + val;
-              return val;
-      };
-
-  this.getFormattedDate = function() {
-    var flags = {
-      yy:   String(this._year).slice(2),
-      yyyy: this._year,
-      M:    this._month + 1,
-      MM:   pad(this._month + 1),
-      d:    this._date,
-      dd:   pad(this._date),
-      H:    this._hour,
-      HH:   pad(this._hour),
-      m:    this._minute,
-      mm:   pad(this._minute)
-    };
-    return this.datePattern.replace(token, function ($0) {
-      return $0 in flags ? flags[$0] : $0.slice(1, $0.length - 1);
-    });
-  };
 };
 
 //
@@ -224,6 +200,33 @@ DailyRotateFile.prototype._write = function(data, callback) {
     });
   }
   callback(null, true);
+};
+
+DailyRotateFile.prototype.getFormattedDate = function() {
+  function pad(val, len) {
+    val = String(val);
+    len = len || 2;
+    while (val.length < len) { val = "0" + val; }
+    return val;
+  };
+
+  var token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhM])\1?/g;
+  var flags = {
+    yy:   String(this._year).slice(2),
+    yyyy: this._year,
+    M:    this._month + 1,
+    MM:   pad(this._month + 1),
+    d:    this._date,
+    dd:   pad(this._date),
+    H:    this._hour,
+    HH:   pad(this._hour),
+    m:    this._minute,
+    mm:   pad(this._minute)
+  };
+
+  return this.datePattern.replace(token, function (arg) {
+    return flags[arg] || arg.slice(1, arg.length - 1);
+  });
 };
 
 //
