@@ -80,6 +80,7 @@ var DailyRotateFile = module.exports = function (options) {
   this.prepend = options.prepend || false;
   this.localTime = options.localTime || false;
   this.zippedArchive = options.zippedArchive || false;
+  this.todayFileName = options.todayFileName;
 
   if (this.json) {
     this.stringify = options.stringify;
@@ -428,6 +429,7 @@ DailyRotateFile.prototype.stream = function (options) {
 // (if any) and the current size of the file used.
 //
 DailyRotateFile.prototype.open = function (callback) {
+  var self = this;
   if (this.opening) {
     //
     // If we are already attempting to open the next
@@ -443,6 +445,15 @@ DailyRotateFile.prototype.open = function (callback) {
     // the message should be buffered.
     //
     callback(true);
+
+    if (self.todayFileName) {
+      var oldFileName = self._getFilename();
+      var sourceFile = path.join(self.dirname, oldFileName);
+      var targetFile = path.join(self.dirname, self._basename + self.getFormattedDate());
+      fs.rename(sourceFile, targetFile, function (err) {
+        if (err) console.log('ERROR' + err);
+      });
+    }
     return this._createStream();
   }
 
@@ -682,6 +693,8 @@ DailyRotateFile.prototype._getFile = function (inc) {
 //
 DailyRotateFile.prototype._getFilename = function () {
   var formattedDate = this.getFormattedDate();
+
+  if (this.todayFileName) return this.todayFileName;
 
   if (this.prepend) {
     if (this.datePattern === '.yyyy-MM-dd') {
